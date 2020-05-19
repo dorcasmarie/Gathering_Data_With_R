@@ -1,0 +1,187 @@
+---
+title: "Twitter_Example"
+author: "Dorcas Washington"
+date: "5/13/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Setup
+
+### Install packages
+
+```{r install, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+install.packages(c('retweet', 'dplyr', 'tidyr', 'stringr', 'tidytext', 'tm', 'textstem', 'ggplot2', 'config'), repos = 'http://cran.us.r-project.org')
+```
+
+
+### Load Libraries
+```{r library, include=FALSE}
+library(rtweet)
+library(config)
+```
+
+### Create Private Document with API Info
+
+APIs typically require some key and token. The Twitter API does as well. Twitter has a workflow for each individual to go through to get that information. Once you have it you can either store it in a text file or you can use keyring or a congfig file. [Here] (https://github.com/rstudio/config) is the link to what I use to access the API information that I put in a yml file. 
+
+```{r api_access}
+rt_creds <- config::get("twitter")
+
+app_name = 'FEC_Sentiment_Analysis'
+create_token(app=app_name,
+             consumer_key = rt_creds$consumer_key,
+             consumer_secret = rt_creds$consumer_secret,
+             access_token = rt_creds$access_token,
+             access_secret = rt_creds$access_secret
+             )
+
+```
+
+Hopefully, we have now successfully accessed our FEC_Sentiment_Analysis APP. A little info about our app. In order to create a Twitter App you have to create a Dev account and answer some questions. It took me between 10-20 mins. Then you get approval from Twitter once they've process your application. 
+
+```{r vignettes }
+#vignette("auth", package = "rtweet") # this tells you the process I went through
+#vignette("intro", package = "rtweet") # this tells you how to use the package
+```
+
+### Searching Twitter for Tweets 
+
+'search_tweets' allows you to search for 18,000 (non-retweeted) related to hashtags or whatever you'd like to search. 
+
+```{r searching twitter}
+library(ggplot2)
+
+rt <- search_tweets(
+'#WineWithDeWine', n = 18000, include_rts = FALSE
+)
+
+head(rt) # preview tweets 
+
+users_data(rt) # preview user data
+
+rtweet::ts_plot(rt) # plots time series if (ggplot2 is installed)
+
+```
+
+If you'd like to quickly visualize frequency of tweets over time use the function ts_plot()
+
+```{r Past 9 days}
+## plot time series of tweets
+ts_plot(rt, "3 hours") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Frequency of #WineWithDeWine Twitter statuses from past 9 days",
+    subtitle = "Twitter status (tweet) counts aggregated using three-hour intervals",
+    caption = "\n Source: Data collected from Twitter's REST API via rtweet"
+  )
+```
+
+So let's do a different search so we can get more results. 
+
+```{r searching for #kpopstansareoverparty}
+
+#rt_kpsaop <- search_tweets('#lhhatl', n=18000, include_rts = FALSE)
+
+#head(rt_kpsaop)
+
+#users_data(rt_kpsaop)
+
+#ts_plot(rt_kpsaop, "3 hours") +
+#  ggplot2::theme_minimal() +
+#  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+#  ggplot2::labs(
+#    x = NULL, y = NULL,
+#    title = "Frequency of #lhhatl Twitter statuses from past 9 days",
+#    subtitle = "Twitter status (tweet) counts aggregated using three-hour intervals",
+#    caption = "\nSource: Data collected from Twitter's REST API via rtweet"
+#  )
+```
+
+We seem to have received a lot of data from this search. 
+
+### Cleaning 
+
+Now it's time to clean the tweets. We need to select the text. Then remove twitter handles, special characters, foreign language characters, one and two letter words, and 'stop words'. Also need to convert everything to lowercase. 
+
+```{r cleaning}
+
+library(stringr)
+library(tm)
+library(tidytext)
+library(tidyr)
+library(dplyr)
+library(textstem)
+
+
+rt_text <- rt %>% select(text) 
+
+rt_text <- str_replace_all(rt_text,"@[\\w]*"," ")
+
+rt_text <- str_replace_all(rt_text, "[^[:alnum:]]", " ")
+
+rt_text <- str_replace_all(rt_text, "[^a-zA-Z0-9]", " ")
+
+rt_text <- str_replace_all(rt_text,"\\b\\w{1,2}\\b"," ")
+
+rt_text <- tolower(rt_text)
+
+data(stop_words)
+
+rt_text <- removeWords(rt_text, stopwords('en'))
+
+rt_text <- stripWhitespace(rt_text)
+
+rt_text <- lemmatize_strings(rt_text)
+
+rt_text
+
+rt$clean_text <- rt_text
+
+```
+
+
+### Analysis 
+
+
+
+```{r analysis }
+
+library(qdap)
+library(SentimentAnalysis)
+
+sentiment <- analyzeSentiment(rt$clean_text) #performs sentiment analysis
+
+rt$score <- sentiment$SentimentQDAP #gets the score
+rt$sentiment <- convertToDirection(sentiment$SentimentQDAP) #tells you positive or negative
+
+rt[,c('text', 'clean_text', 'score', 'sentiment')] #display important info
+```
+
+### Visualization 
+
+```{r viz}
+library(ggplot2)
+
+#Sentiments distribution
+ggplot(rt, aes(sentiment)) + geom_bar()
+
+library(tidytext)
+
+# the distribution of words per review
+words_per_review <- rt %>%
+  unnest_tokens(word, text) %>%
+  count(user_id, name = "total_words")
+
+words_per_review %>%
+  ggplot(aes(total_words)) +
+  geom_histogram(fill = "midnightblue", alpha = 0.8)
+
+```
+
+
+

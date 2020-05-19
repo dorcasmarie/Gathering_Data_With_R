@@ -1,0 +1,255 @@
+---
+title: "API and Data Gathering.Rmd"
+author: "Dorcas Washington"
+date: "4/29/2020"
+output: html_document
+bibliography: refs.bib
+csl: style.csl 
+---
+
+
+## Workshop Summary and Contact Information
+
+**Summary:** R is a free and powerful programming language that is commonly used by researchers in both qualitative and quantitative disciplines. Application Programming Interfaces (APIs) are ways to access the information or funtionality of one program from within another (Waldhauser). 
+
+
+https://www.r-bloggers.com/accessing-apis-from-r-and-a-little-r-programming/
+
+**Contact:**   
+Email: AskData@uc.edu   
+
+Location: 240 Braunstein Hall (GMP Library)  
+
+Research & Data Services Website: https://libraries.uc.edu/research-teaching-support/research-data-services.html
+
+GitHub: dorcasmarie
+
+## Section I: Brief Introduction R 
+
+### 1. R for basic calculation
+```{r}
+sin(pi*15)/100
+```
+
+
+### 2. R Objects & Assignment
+R stores values and objects so they can be reused throughout an equation or script\
+Hint alt - is a shortcut for the < - 
+```{r}
+x <- 1+2
+y <- x +1
+y
+```
+
+## Section II. Introduction to Application Program Interfaces (APIs)
+
+### What are APIs?
+
+APIs are extremely useful tools that allow us to gather data from various sources. 
+In this tutorial today we will use APIs to gather data from PubMed, and at the end I'll do a demo of using Twitter's API. For the PubMed portion of this tutorial we are going to use Dr. Aaron Gowins post on datascience+.com as a guide and outline [datascienceplus.com]. Here's a link to the post (https://datascienceplus.com/search-pubmed-with-rismed/). 
+
+
+
+## Section III. Connecting and Querying APIs in R
+
+Today we are using APIs to query data from databases. PubMed is the search engine the connects us to and allows us to query the MEDLINE database mainly composed of life science and biomedical topics (https://www.ncbi.nlm.nih.gov/pubmed/). "The United States National Library of Medicine at the National Institutes of Health maintain the database" (https://www.ncbi.nlm.nih.gov/pubmed/).
+
+In order to use APIs in R you could use "httr" package as a generally way to access most APIs or we can use specific packages that were written for using specific APIs. For example, below we are install "RISmed" which allows us to access the MEDLINE database we mentioned before. There's also "rtweet" that works really well with Twitter APIs. 
+
+### Installing packages
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+ install.packages(c("RISmed", "qdap", "jsonlite", "purrr", "data.table"), repos="http://cran.us.r-project.org")
+```
+
+### Load the library we are going to use 
+This way we can use the packages
+
+
+### Query and Summarizing 
+
+"The EUtilsSummary function helps narrow a search query and will indicate how much data is available under the querying criteria. This is an important steps as it allows your to do some exploratory work with downloading the actual data." (https://amunategui.github.io/pubmed-query/)
+
+We can call the summary function and see what the res holds:
+
+Some issues you might run into while querying APIs are rate limits. A rate limit how often you can pull a request from the database. Different APIs and databases have different rate limits. If you don't set a rate limit you can put in several calls (requests) to the API too often and it will kick you off or lock you out of the system because you are straining it.
+
+"In order not to overload the E-utility servers, NCBI recommends that users post no more than three URL requests per second and limit large jobs to either weekends or between 9:00 PM and 5:00 AM Eastern time during weekdays. Failure to comply with this policy may result in an IP address being blocked from accessing NCBI." <-- from RIS Help EUtilsGet
+
+Maximum number of records to retrieve, default is 1000.
+
+
+```{r pubmed_query}
+library(RISmed)
+query_str <- c("hair loss")
+# let's query the first 100 results for this string 
+res_100 <- EUtilsSummary(query_str, db="pubmed", retmax=100, mindate=2010, maxdate=2020)
+summary(res_100)
+# EUtilSummary function assist by narrowing a search query & tells how much data is available
+res <- EUtilsSummary(query_str, db="pubmed", retmax=14000, mindate=2010, maxdate=2020)
+# change to 2000 
+QueryCount(res)
+summary(res)
+# once you're happy with what's being searched 
+fetch <- EUtilsGet(res, type = "efetch", db = "pubmed")
+class(fetch)
+fetch
+```
+
+We started by defining the string of words that we want to search. Essentially, we typed out what we would enter in the search bar. Next we pull the first 100 results of that query. The 'EUtilsSummary' gives us a lot of information back such as all the search terms associated with the string of words entered into the query. Also it tells us the amount of data that is avaliable. Once we are happy with this small query we can expand the results to include more data. By default it pull the first 1000 records.
+
+
+
+## Section IV. Data Wrangling and Analysis 
+
+The next step is to extracting meaningful and useful information from results. This could be article author, publication date at PubMed. 
+
+
+
+```{r info gathering}
+
+#title_art <- ArticleTitle(EUtilsGet(res)) #capture the article titles
+#is_the_same <- title_art == fetch@ArticleTitle # just to show that these two things give the same result
+#head(title_art,1) #look at title_art
+#title_art[2] #look at second object
+
+yr_pubmed <- YearPubmed(EUtilsGet(res)) # garb the year published on pubmed
+sum(is.na(yr_pubmed)) #figure out how many results are missing a year
+
+yr_rec <- YearReceived(EUtilsGet(res))
+sum(is.na(yr_rec))
+#see lots of na's for YearReceived
+```
+
+### Analysis 
+
+First we are going to plot the number of journal articles per year that were accepted by PubMed.
+
+```{r basic yearly counts}
+
+library(ggplot2)
+date()
+count<-table(yr_pubmed)
+count<-as.data.frame(count)
+names(count)<-c("Year", "Counts")
+num <- data.frame(Year=count$Year, Counts=cumsum(count$Counts))
+num$g <- query_str
+names(num) <- c("Year", "Counts", "g")
+num
+```
+And we could plot the number of articles by year but a quick peak at num shows that all the occurances that API captured happened this year. 
+
+
+```{r plot_code}
+
+
+q <- ggplot(num, aes(x=Year, y=Counts)) + geom_bar(stat='identity')
+q <- q + ggtitle(paste("PubMed articles containing '",query_str, "'", sep="")) +
+     ylab("Number of articles") +
+     xlab(paste("Year \n Query date: ", Sys.time(), sep="")) +
+     labs(colour="") +
+     theme_bw()
+q
+```
+
+
+
+### Text Mine
+
+Next we are going ot look at the 20 most frequent words used in articles for that year 2020 with the query above.
+
+```{r myFunc_Code}
+
+library(qdap)
+
+myFunc<-function(argument){
+        articles1<-data.frame('Abstract'=AbstractText(fetch), 'Year'=YearPubmed(fetch))
+        abstracts1<-articles1[which(articles1$Year==argument),]
+        abstracts1<-data.frame(abstracts1)
+        abstractsOnly<-as.character(abstracts1$Abstract)
+        abstractsOnly<-paste(abstractsOnly, sep="", collapse="")
+        abstractsOnly<-as.vector(abstractsOnly)
+        abstractsOnly<-strip(abstractsOnly)
+        stsp<-rm_stopwords(abstractsOnly, stopwords = qdapDictionaries::Top100Words)
+        ord<-as.data.frame(table(stsp))
+        ord<-ord[order(ord$Freq, decreasing=TRUE),]
+        head(ord,20)
+}
+
+
+```
+
+We can now run our function above for the year 2015 and 2020.
+
+```{r compare}
+twenty_twenty <- myFunc(2020)
+twenty_fifteen <- myFunc(2015)
+
+names(twenty_twenty) <- c("2020", "freq")
+names(twenty_fifteen) <- c("2015", "freq")
+
+
+twenty_twenty
+twenty_fifteen
+```
+
+Next we might want to look at top publishing authors. We are applying a function to create a table of authors last name. 
+
+
+
+```{r authors}
+
+auths<-Author(EUtilsGet(res))
+typeof(auths) # lets look at how it's stored quickly
+auths[3] #let's see the third author in this list, note this creates a data.frame
+Last<-sapply(auths, function(x)paste(x$LastName)) #extrcating a list of last name
+First <- sapply(auths, function(x)paste(x$ForeName)) # extracting list of first names
+
+library(jsonlite)
+library(purrr)
+library(data.table)
+
+
+dt_list <- purrr::map(auths, data.table::as.data.table)
+dt <- data.table::rbindlist(dt_list, fill = TRUE, idcol = T)
+
+dt
+
+library(tidyr)
+
+
+summarized_names <- dt %>% dplyr::group_by(LastName, ForeName) %>% dplyr::tally(sort=TRUE)
+summarized_names
+#the function above groups people by last name then first name then counts and sorts by descending
+
+
+auths2<-as.data.frame(sort(table(unlist(Last))), dec=TRUE) #this is what was shown on the website
+names(auths2)<-c("name")
+head(auths2)
+
+#the function above unlist the last names then putting everything into a table, then sorts by counts descending, and then puts this all in a dataframe. As you can see the result is completely different from summarized names 
+
+```
+
+## Section V. Citations 
+
+@Amunategui, M. (n.d.). Getting PubMed Medical Text with R and Package {RISmed}. Retrieved May 12, 2020, from https://amunategui.github.io/pubmed-query/
+
+@Gowins, A. (2017, April 28). How to Search PubMed with RISmed package in R. Retrieved May 12, 2020, from https://datascienceplus.com/search-pubmed-with-rismed/
+
+@Home - PubMed - NCBI. (n.d.). Retrieved May 12, 2020, from https://www.ncbi.nlm.nih.gov/pubmed
+
+
+```{r citation}
+citation("base")
+citation("RISmed")
+citation("tidyr")
+citation("data.table")
+citation("purrr")
+citation("jsonlite")
+citation("qdap")
+citation("ggplot2")
+
+
+```
