@@ -109,12 +109,12 @@ The next step is to extracting meaningful and useful information from results. T
 
 ```{r info gathering}
 
-#title_art <- ArticleTitle(EUtilsGet(res)) #capture the article titles
-#is_the_same <- title_art == fetch@ArticleTitle # just to show that these two things give the same result
+title_art <- ArticleTitle(EUtilsGet(res)) #capture the article titles
+is_the_same <- title_art == fetch@ArticleTitle # just to show that these two things give the same result
 #head(title_art,1) #look at title_art
 #title_art[2] #look at second object
 
-yr_pubmed <- YearPubmed(EUtilsGet(res)) # garb the year published on pubmed
+yr_pubmed <- YearPubmed(EUtilsGet(res)) # grab the year published on pubmed
 sum(is.na(yr_pubmed)) #figure out how many results are missing a year
 
 yr_rec <- YearReceived(EUtilsGet(res))
@@ -184,14 +184,16 @@ We can now run our function above for the year 2015 and 2020.
 
 ```{r compare}
 twenty_twenty <- myFunc(2020)
-#twenty_fifteen <- myFunc(2015)
+twenty_nineteen <- myFunc(2019)
 
 names(twenty_twenty) <- c("2020", "freq")
-#names(twenty_fifteen) <- c("2015", "freq")
+names(twenty_nineteen) <- c("2019", "freq")
 
 
 twenty_twenty
-#twenty_fifteen
+twenty_nineteen
+
+
 ```
 
 Next we might want to look at top publishing authors. We are applying a function to create a table of authors last name. 
