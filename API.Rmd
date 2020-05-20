@@ -58,6 +58,7 @@ In order to use APIs in R you could use "httr" package as a generally way to acc
 ### Installing packages
 
 ```{r setup, include=FALSE}
+install.packages("knitr")
 knitr::opts_chunk$set(echo = TRUE)
  install.packages(c("RISmed", "qdap", "jsonlite", "purrr", "data.table", "ggplot2", "tidyr"), repos="http://cran.us.r-project.org")
 ```
