@@ -10,10 +10,8 @@ nocite: '@*'
 
 ## Workshop Summary and Contact Information
 
-**Summary:** R is a free and powerful programming language that is commonly used by researchers in both qualitative and quantitative disciplines. Application Programming Interfaces (APIs) are ways to access the information or funtionality of one program from within another. 
+**Summary:** R is a free and powerful programming language that is commonly used by researchers in both qualitative and quantitative disciplines. Application Programming Interfaces (APIs) are ways to access the information or funtionality of one program from within another [@Waldhauser].
 
-
-https://www.r-bloggers.com/accessing-apis-from-r-and-a-little-r-programming/
 
 **Contact:**   
 Email: AskData@uc.edu   
@@ -53,7 +51,7 @@ In this tutorial today we will use APIs to gather data from PubMed, and at the e
 
 Today we are using APIs to query data from databases. PubMed is the search engine the connects us to and allows us to query the MEDLINE database mainly composed of life science and biomedical topics [@pubmed]. "The United States National Library of Medicine at the National Institutes of Health maintain the database" [@pubmed].
 
-In order to use APIs in R you could use "httr" package as a generally way to access most APIs or we can use specific packages that were written for using specific APIs. For example, below we are install "RISmed" which allows us to access the MEDLINE database we mentioned before. There's also "rtweet" that works really well with Twitter APIs. 
+In order to use APIs in R you could use "httr" package as a generally way to access most APIs or we can use specific packages that were written for using specific APIs. For example, below we are install "RISmed" which allows us to access the MEDLINE database we mentioned before. There's also "rtweet" that works really well with Twitter APIs [@Waldhauser].
 
 ### Installing packages
 
@@ -97,7 +95,9 @@ class(fetch)
 fetch
 ```
 
-We started by defining the string of words that we want to search. Essentially, we typed out what we would enter in the search bar. Next we pull the first 100 results of that query. The 'EUtilsSummary' gives us a lot of information back such as all the search terms associated with the string of words entered into the query. Also it tells us the amount of data that is avaliable. Once we are happy with this small query we can expand the results to include more data. By default it pull the first 1000 records.
+
+
+We started by defining the string of words that we want to search. Essentially, we typed out what we would enter in the search bar. Next we pull the first 100 results of that query. The 'EUtilsSummary' gives us a lot of information back such as all the search terms associated with the string of words entered into the query. Also it tells us the amount of data that is avaliable. Once we are happy with this small query we can expand the results to include more data. By default it pulls the first 1000 records.
 
 
 
